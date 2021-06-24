@@ -19,6 +19,8 @@ const Canvas = ({
   let prevPoint = null;
   let currentStroke = null;
   const [svgStrokes, setSvgStrokes] = useState([]);
+  const [loadedStrokes, setLoadedStrokes] = useState(false);
+  const [circles, setCircles] = useState([]);
 
   const cvs = () => {
     return canvas.current;
@@ -28,18 +30,78 @@ const Canvas = ({
     return cvs().getContext("2d");
   };
 
+  const smoothPoints = (points) => {
+    return points;
+  };
+
+  const smoothPressure = (points) => {
+    // get extreme points in pressure
+    let extremesIndices = [0, points.length - 1];
+    let lastValue = 0;
+    let trendUp = true;
+    points.forEach((point, index) => {
+      if (point.pressure > lastValue && !trendUp) {
+        extremesIndices.push(index);
+        trendUp = true;
+      } else if (point.pressure < lastValue && trendUp) {
+        extremesIndices.push(index);
+        trendUp = false;
+      }
+      lastValue = point.pressure;
+    });
+    extremesIndices = [...new Set(extremesIndices)];
+    extremesIndices.sort((a, b) => a - b);
+
+    points.forEach((point, index) => {
+      if (!extremesIndices.includes(index)) {
+        let below = 0;
+        let found = false;
+        extremesIndices.forEach((extreme) => {
+          if (extreme < index) {
+            below = extreme;
+          } else if (extreme > index && !found) {
+            found = true;
+            let factor = (index - below) / (extreme - below);
+            if (points[extreme].pressure < points[below].pressure) {
+              factor = 1 - factor;
+            }
+            point.pressure =
+              Math.min(points[extreme].pressure, points[below].pressure) +
+              Math.abs(points[extreme].pressure - points[below].pressure) *
+                factor;
+          }
+        });
+      }
+    });
+
+    return points;
+  };
+
   const smoothStroke = (stroke) => {
+    let newPoints = stroke.path.filter(
+      (point) => point !== null && point.pressure > 0
+    );
+    if (stroke.path.length > 0) {
+      stroke.path = smoothPressure(smoothPoints(newPoints));
+    }
     return stroke;
   };
 
   useEffect(() => {
     if (callback) callback(svgStrokes);
     ctx().clearRect(0, 0, width, height);
+
+    if (loadedStrokes) {
+      sessionStorage.setItem("strokes", JSON.stringify(svgStrokes));
+    }
   }, [svgStrokes]);
 
   const finishStroke = () => {
     if (currentStroke && !erasing) {
-      setSvgStrokes((strokes) => [...strokes, smoothStroke(currentStroke)]);
+      currentStroke = smoothStroke(currentStroke);
+      if (currentStroke.path.length > 0) {
+        setSvgStrokes((strokes) => [...strokes, currentStroke]);
+      }
     }
   };
 
@@ -150,6 +212,12 @@ const Canvas = ({
   useEffect(() => {
     ctx().lineJoin = "round";
     ctx().lineCap = "round";
+
+    const storedStrokes = sessionStorage.getItem("strokes");
+    if (storedStrokes) {
+      setSvgStrokes(JSON.parse(storedStrokes));
+    }
+    setLoadedStrokes(true);
   }, []);
 
   return (
@@ -166,6 +234,7 @@ const Canvas = ({
         height={height}
         style={{
           backgroundColor: canvasColor,
+          zIndex: 2,
         }}
         ref={canvas}
       ></canvas>
@@ -179,6 +248,7 @@ const Canvas = ({
         xmlns="http://www.w3.org/2000/svg"
       >
         {makePaths()}
+        {circles}
       </svg>
     </div>
   );
