@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { CurveInterpolator } from "curve-interpolator";
 import "./App.css";
 
 const Canvas = ({
@@ -30,26 +31,32 @@ const Canvas = ({
     return cvs().getContext("2d");
   };
 
-  const smoothPoints = (points) => {
+  const adjustPointDensity = (points) => {
     return points;
     const density = 5;
     let newPoints = [];
+    let cs = [];
     points.forEach((point, index) => {
       if (index > 0 && index < points.length - 1) {
         const next = points[index + 1];
         const distNext = Math.sqrt(
           Math.pow(next.x - point.x, 2) + Math.pow(next.y - point.y, 2)
         );
-        if (distNext > density) {
-          for (let i = 0; i <= distNext / density; i++) {
+        const pointAmount = Math.floor(distNext / density);
+        if (pointAmount > 0) {
+          console.log(pointAmount);
+          for (let i = 1; i <= distNext / density; i++) {
             const newPoint = JSON.parse(JSON.stringify(point));
-            newPoint.x = 0;
-            newPoint.y = 0;
+            newPoint.x = point.x + ((next.x - point.x) * i) / pointAmount;
+            newPoint.y = point.y + ((next.y - point.y) * i) / pointAmount;
+            newPoints.push(newPoint);
           }
         }
       }
+      cs.push(<circle cx={point.x} cy={point.y} r="2" fill="red" />);
       newPoints.push(point);
     });
+    // setCircles(cs);
     return newPoints;
   };
 
@@ -71,6 +78,7 @@ const Canvas = ({
     extremesIndices = [...new Set(extremesIndices)];
     extremesIndices.sort((a, b) => a - b);
 
+    // apply gradient to other points
     points.forEach((point, index) => {
       if (!extremesIndices.includes(index)) {
         let below = 0;
@@ -101,7 +109,7 @@ const Canvas = ({
       (point) => point !== null && point.pressure > 0
     );
     if (stroke.path.length > 0) {
-      stroke.path = smoothPressure(smoothPoints(newPoints));
+      stroke.path = smoothPressure(adjustPointDensity(newPoints));
     }
     return stroke;
   };
@@ -210,15 +218,20 @@ const Canvas = ({
   const makePaths = () => {
     let strokes = [];
     svgStrokes.forEach((stroke, sI) => {
-      let paths = stroke.path.map((point, pI) => {
+      const points = stroke.path.map((point) => [point.x, point.y]);
+      const interp = new CurveInterpolator(points, { tension: 0.8 });
+      const allPts = interp.getPoints(points.length * 2);
+      console.log(interp);
+      const paths = stroke.path.map((point, pI) => {
         if (pI > 0) {
-          let prev = stroke.path[pI - 1];
+          const prev = stroke.path[pI - 1];
+          const control = allPts[pI * 2];
           return (
             <path
               key={pI}
               strokeWidth={point.pressure * stroke.strokeWidth}
               strokeLinecap="round"
-              d={`M${prev.x} ${prev.y} ${point.x} ${point.y}`}
+              d={`M${prev.x},${prev.y} Q${control[0]},${control[1]} ${point.x},${point.y}`}
             />
           );
         }
