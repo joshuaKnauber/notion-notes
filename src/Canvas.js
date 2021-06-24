@@ -31,36 +31,70 @@ const Canvas = ({
     return cvs().getContext("2d");
   };
 
-  const adjustPointDensity = (points) => {
-    return points;
-    const density = 5;
+  const dist = (a, b) => {
+    return Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
+  };
+
+  const patchPoints = (points, density) => {
     let newPoints = [];
-    let cs = [];
     points.forEach((point, index) => {
       if (index > 0 && index < points.length - 1) {
         const next = points[index + 1];
-        const distNext = Math.sqrt(
-          Math.pow(next.x - point.x, 2) + Math.pow(next.y - point.y, 2)
-        );
-        const pointAmount = Math.floor(distNext / density);
+
+        const pointAmount = Math.floor(dist(point, next) / density);
         if (pointAmount > 0) {
-          console.log(pointAmount);
-          for (let i = 1; i <= distNext / density; i++) {
+          for (let i = 1; i < pointAmount; i++) {
             const newPoint = JSON.parse(JSON.stringify(point));
-            newPoint.x = point.x + ((next.x - point.x) * i) / pointAmount;
-            newPoint.y = point.y + ((next.y - point.y) * i) / pointAmount;
+            newPoint.x = point.x + (next.x - point.x) * (i / pointAmount);
+            newPoint.y = point.y + (next.y - point.y) * (i / pointAmount);
             newPoints.push(newPoint);
           }
         }
       }
-      cs.push(<circle cx={point.x} cy={point.y} r="2" fill="red" />);
       newPoints.push(point);
     });
+    return newPoints;
+  };
+
+  const filterPoints = (points, density) => {
+    let newPoints = [points[0]];
+    points.forEach((point, index) => {
+      if (index > 0) {
+        const prev = newPoints[newPoints.length - 1];
+        if (dist(point, prev) >= density) {
+          newPoints.push(point);
+        }
+      }
+    });
+    return newPoints;
+  };
+
+  const adjustPointDensity = (points) => {
+    const minDensity = 10;
+    const maxDensity = 5;
+
+    // add points
+    let newPoints = patchPoints(points, minDensity);
+
+    // filter points
+    newPoints = filterPoints(points, maxDensity);
+
+    let cs = [];
+    newPoints.forEach((point, index) =>
+      cs.push(<circle cx={point.x} cy={point.y} r="2" fill="red" key={index} />)
+    );
     // setCircles(cs);
+
     return newPoints;
   };
 
   const smoothPressure = (points) => {
+    // set min pressure
+    const minPressure = 0.1;
+    points.forEach(
+      (point) => (point.pressure = Math.max(minPressure, point.pressure))
+    );
+
     // get extreme points in pressure
     let extremesIndices = [0, points.length - 1];
     let lastValue = 0;
@@ -215,30 +249,39 @@ const Canvas = ({
     finishStroke();
   };
 
+  const moveTowards = (point, moveTo, factor) => {
+    point.x = point.x + (moveTo.x - point.x) * factor;
+    point.y = point.y + (moveTo.y - point.y) * factor;
+  };
+
   const makePaths = () => {
     let strokes = [];
     svgStrokes.forEach((stroke, sI) => {
-      const points = stroke.path.map((point) => [point.x, point.y]);
-      const interp = new CurveInterpolator(points, { tension: 0.2 });
-      const allPts = interp.getPoints(points.length * 2);
+      let i = 0;
       const paths = stroke.path.map((point, pI) => {
-        if (pI > 0) {
-          const prev = allPts[pI * 2 - 1];
-          const curr = allPts[pI * 2];
-          const next = allPts[pI * 2 + 1];
-          const d = `M${prev[0]},${prev[1]} Q${curr[0]},${curr[1]} ${next[0]},${next[1]}`;
+        if (pI > 0 && pI < stroke.path.length - 1) {
+          i += 1;
+          const prev = stroke.path[pI - 1];
+          const next = stroke.path[pI + 1];
+          let first = { x: prev.x, y: prev.y };
+          let second = { x: next.x, y: next.y };
+          moveTowards(first, point, 0.5);
+          moveTowards(second, point, 0.5);
           return (
             <path
               key={pI}
               strokeWidth={point.pressure * stroke.strokeWidth}
               strokeLinecap="round"
-              d={d}
+              strokeLinejoin="round"
+              stroke={stroke.color}
+              // stroke={i % 2 ? "red" : "blue"}
+              d={`M${first.x} ${first.y} Q ${point.x} ${point.y} ${second.x} ${second.y}`}
             />
           );
         }
       });
       strokes.push(
-        <g key={sI} fill="none" stroke={stroke.color}>
+        <g key={sI} fill="none">
           {paths}
         </g>
       );

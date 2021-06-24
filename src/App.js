@@ -27,23 +27,21 @@ const App = () => {
 
   const updateCanvas = (strokes) => {
     if (strokes.length === 0) return;
-    const lastStroke = strokes[strokes.length - 1];
-    const lastPathPoint = lastStroke.path[lastStroke.path.length - 1];
+    // update
+  };
 
-    const increaseSize = 150;
-    const increaseThreshold = 50;
-
-    if (lastPathPoint.x > canvasWidth - increaseThreshold) {
-      setCanvasWidth(canvasWidth + increaseSize);
-    }
-    if (lastPathPoint.y > canvasHeight - increaseThreshold) {
-      setCanvasHeight(canvasHeight + increaseSize);
-    }
+  const resize = () => {
+    setCanvasWidth(window.innerWidth);
+    setCanvasHeight(window.innerHeight);
   };
 
   useEffect(() => {
-    setCanvasWidth(window.innerWidth);
-    setCanvasHeight(window.innerHeight);
+    resize();
+
+    window.addEventListener("resize", resize);
+    return () => {
+      window.removeEventListener("resize", resize);
+    };
   }, []);
 
   const clearCanvas = () => {
