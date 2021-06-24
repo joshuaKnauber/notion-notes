@@ -215,23 +215,18 @@ const Canvas = ({
     finishStroke();
   };
 
-  const [enableSmoothing, setEnableSmoothing] = useState(false);
-  const [tension, setTension] = useState(0.1);
   const makePaths = () => {
     let strokes = [];
     svgStrokes.forEach((stroke, sI) => {
       const points = stroke.path.map((point) => [point.x, point.y]);
-      const interp = new CurveInterpolator(points, { tension: tension });
+      const interp = new CurveInterpolator(points, { tension: 0.2 });
       const allPts = interp.getPoints(points.length * 2);
       const paths = stroke.path.map((point, pI) => {
         if (pI > 0) {
           const prev = allPts[pI * 2 - 1];
           const curr = allPts[pI * 2];
           const next = allPts[pI * 2 + 1];
-          let d = `M${prev[0]},${prev[1]} ${next[0]},${next[1]}`;
-          if (enableSmoothing) {
-            d = `M${prev[0]},${prev[1]} Q${curr[0]},${curr[1]} ${next[0]},${next[1]}`;
-          }
+          const d = `M${prev[0]},${prev[1]} Q${curr[0]},${curr[1]} ${next[0]},${next[1]}`;
           return (
             <path
               key={pI}
@@ -292,19 +287,6 @@ const Canvas = ({
         {makePaths()}
         {circles}
       </svg>
-
-      <button
-        onClick={() => setEnableSmoothing(!enableSmoothing)}
-        style={{ position: "fixed", zIndex: 100, top: 0, left: 0 }}
-      >
-        smoothing: {JSON.stringify(enableSmoothing)}
-      </button>
-      <input
-        type="number"
-        onChange={(e) => setTension(parseFloat(e.target.value))}
-        style={{ position: "fixed", zIndex: 100, top: 0, left: 150 }}
-        value={tension}
-      />
     </div>
   );
 };
