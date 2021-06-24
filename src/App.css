@@ -42,14 +42,11 @@ body {
   outline: none;
   padding: 0px;
   margin: 0px;
-  margin-bottom: 16px;
   cursor: pointer;
   background-color: transparent;
   color: white;
   opacity: 0.4;
-}
-.toolbar:last-child {
-  margin-bottom: 0px;
+  margin-bottom: 16px;
 }
 
 .on {
@@ -62,4 +59,13 @@ body {
   margin: 10px;
   border-radius: 50%;
   cursor: pointer;
+}
+
+.brushSize {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }

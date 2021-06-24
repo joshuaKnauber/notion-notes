@@ -32,6 +32,25 @@ const Canvas = ({
 
   const smoothPoints = (points) => {
     return points;
+    const density = 5;
+    let newPoints = [];
+    points.forEach((point, index) => {
+      if (index > 0 && index < points.length - 1) {
+        const next = points[index + 1];
+        const distNext = Math.sqrt(
+          Math.pow(next.x - point.x, 2) + Math.pow(next.y - point.y, 2)
+        );
+        if (distNext > density) {
+          for (let i = 0; i <= distNext / density; i++) {
+            const newPoint = JSON.parse(JSON.stringify(point));
+            newPoint.x = 0;
+            newPoint.y = 0;
+          }
+        }
+      }
+      newPoints.push(point);
+    });
+    return newPoints;
   };
 
   const smoothPressure = (points) => {
@@ -157,7 +176,11 @@ const Canvas = ({
   const startDrawing = (strokePoint) => {
     if (!strokePoint) return;
     drawing = true;
-    currentStroke = { color: strokeColor, path: [strokePoint] };
+    currentStroke = {
+      color: strokeColor,
+      strokeWidth: strokeWidth,
+      path: [strokePoint],
+    };
     prevPoint = strokePoint;
   };
 
@@ -193,7 +216,7 @@ const Canvas = ({
           return (
             <path
               key={pI}
-              strokeWidth={point.pressure * strokeWidth}
+              strokeWidth={point.pressure * stroke.strokeWidth}
               strokeLinecap="round"
               d={`M${prev.x} ${prev.y} ${point.x} ${point.y}`}
             />

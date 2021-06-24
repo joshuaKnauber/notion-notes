@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { faEraser, faSun, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faEraser,
+  faSun,
+  faTrash,
+  faPlus,
+  faMinus,
+} from "@fortawesome/free-solid-svg-icons";
 import Canvas from "./Canvas";
 import Button from "./components/Button";
 import ColorPicker from "./components/ColorPicker";
@@ -86,7 +92,7 @@ const App = () => {
           enabled={true}
           callback={() => clearCanvas()}
         />
-        {["black", "white", "red", "aqua", "lime", "yellow"].map((value) => (
+        {["black", "white", "red", "blue"].map((value) => (
           <ColorPicker
             key={value}
             color={value}
@@ -96,6 +102,28 @@ const App = () => {
             darkMode={darkMode}
           />
         ))}
+        <Button
+          icon={faPlus}
+          color={iconColor}
+          enabled={true}
+          callback={() => setStrokeWidth(Math.min(40, strokeWidth + 1))}
+        />
+        <div className="brushSize">
+          <div
+            style={{
+              width: strokeWidth,
+              height: strokeWidth,
+              backgroundColor: strokeColor,
+              borderRadius: "50%",
+            }}
+          ></div>
+        </div>
+        <Button
+          icon={faMinus}
+          color={iconColor}
+          enabled={true}
+          callback={() => setStrokeWidth(Math.max(1, strokeWidth - 1))}
+        />
       </div>
     </div>
   );
