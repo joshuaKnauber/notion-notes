@@ -33,7 +33,7 @@ const App = () => {
       }
     }
 
-    if (strokes.length === 0) return;
+    if (!strokes || strokes.length === 0) return;
 
     let maxX = window.innerWidth;
     let maxY = window.innerHeight;
