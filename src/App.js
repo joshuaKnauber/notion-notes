@@ -25,14 +25,34 @@ const App = () => {
   const [canvasWidth, setCanvasWidth] = useState(500);
   const [canvasHeight, setCanvasHeight] = useState(500);
 
-  const updateCanvas = (strokes) => {
+  const updateCanvas = (strokes = null) => {
+    if (!strokes) {
+      strokes = sessionStorage.getItem("strokes");
+      if (strokes) {
+        strokes = JSON.parse(strokes);
+      }
+    }
+
     if (strokes.length === 0) return;
-    // update
+
+    let maxX = window.innerWidth;
+    let maxY = window.innerHeight;
+    strokes.forEach((stroke) => {
+      stroke.path.forEach((point) => {
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
+      });
+    });
+
+    const increase = 250;
+    setCanvasWidth(maxX + increase);
+    setCanvasHeight(maxY + increase);
   };
 
   const resize = () => {
     setCanvasWidth(window.innerWidth);
     setCanvasHeight(window.innerHeight);
+    updateCanvas();
   };
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 body {
-  background-color: antiquewhite;
+  background-color: white;
+  overflow: hidden;
 }
 
 html,
@@ -8,6 +9,9 @@ body {
 }
 
 .App {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .canvasContainer {

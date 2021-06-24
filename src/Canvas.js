@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { CurveInterpolator } from "curve-interpolator";
+import { Scrollbars } from "react-custom-scrollbars";
 import "./App.css";
 
 const Canvas = ({
@@ -15,12 +15,14 @@ const Canvas = ({
   // CANVAS PROPS
   const canvas = useRef();
   const svgCanvas = useRef();
+  const scrollbar = useRef();
 
   let drawing = false;
   let prevPoint = null;
   let currentStroke = null;
   const [svgStrokes, setSvgStrokes] = useState([]);
   const [loadedStrokes, setLoadedStrokes] = useState(false);
+  const [startPos, setStartPos] = useState([0, 0]);
   const [circles, setCircles] = useState([]);
 
   const cvs = () => {
@@ -77,7 +79,7 @@ const Canvas = ({
     let newPoints = patchPoints(points, minDensity);
 
     // filter points
-    newPoints = filterPoints(points, maxDensity);
+    // newPoints = filterPoints(points, maxDensity);
 
     let cs = [];
     newPoints.forEach((point, index) =>
@@ -168,9 +170,10 @@ const Canvas = ({
 
   const makeStrokePoint = (e) => {
     if (!acceptPointerTypes.includes(e.pointerType)) return null;
+    const rect = cvs().getBoundingClientRect();
     return {
-      x: e.clientX,
-      y: e.clientY,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
       pressure: e.pressure,
       pointerType: e.pointerType,
       timeStamp: e.timeStamp,
@@ -289,9 +292,37 @@ const Canvas = ({
     return strokes;
   };
 
+  const getPointerPosition = (e) => {
+    return [width - e.clientX, height - e.clientY];
+  };
+
+  const startDragCanvas = (e) => {
+    if (
+      e.pointerType == "touch" ||
+      (e.pointerType == "mouse" && !acceptPointerTypes.includes("mouse"))
+    ) {
+      const { scrollLeft, scrollTop } = scrollbar.current.getValues();
+      const position = getPointerPosition(e);
+      setStartPos([position[0] - scrollLeft, position[1] - scrollTop]);
+    }
+  };
+
+  const dragCanvas = (e) => {
+    if (
+      e.pointerType == "touch" ||
+      (e.pointerType == "mouse" && !acceptPointerTypes.includes("mouse"))
+    ) {
+      const moveX = getPointerPosition(e)[0] - startPos[0];
+      const moveY = getPointerPosition(e)[1] - startPos[1];
+      scrollbar.current.scrollLeft(moveX);
+      scrollbar.current.scrollTop(moveY);
+    }
+  };
+
   useEffect(() => {
     ctx().lineJoin = "round";
     ctx().lineCap = "round";
+    ctx().globalCompositeOperation = "destination-over";
 
     const storedStrokes = sessionStorage.getItem("strokes");
     if (storedStrokes) {
@@ -301,36 +332,44 @@ const Canvas = ({
   }, []);
 
   return (
-    <div
-      className="canvasContainer"
-      onPointerDown={(e) => startDrawing(makeStrokePoint(e))}
-      onPointerMove={(e) => keepDrawing(makeStrokePoint(e), e)}
-      onPointerUp={(e) => endDrawing(makeStrokePoint(e))}
-      onPointerLeave={(e) => cancelDrawing()}
-      onPointerCancel={(e) => cancelDrawing()}
+    <Scrollbars
+      style={{ width: window.innerWidth, height: window.innerHeight }}
+      ref={scrollbar}
     >
-      <canvas
-        width={width}
-        height={height}
-        style={{
-          backgroundColor: canvasColor,
-          zIndex: 2,
+      <div
+        className="canvasContainer"
+        onPointerDown={(e) => {
+          startDrawing(makeStrokePoint(e));
+          startDragCanvas(e);
         }}
-        ref={canvas}
-      ></canvas>
-
-      <svg
-        ref={svgCanvas}
-        className="svgCanvas"
-        width={width}
-        height={height}
-        version="1.1"
-        xmlns="http://www.w3.org/2000/svg"
+        onPointerMove={(e) => {
+          keepDrawing(makeStrokePoint(e), e);
+          dragCanvas(e);
+        }}
+        onPointerUp={(e) => endDrawing(makeStrokePoint(e))}
+        onPointerLeave={(e) => cancelDrawing()}
+        onPointerCancel={(e) => cancelDrawing()}
       >
-        {makePaths()}
-        {circles}
-      </svg>
-    </div>
+        <canvas
+          width={width}
+          height={height}
+          className="svgCanvas"
+          ref={canvas}
+        ></canvas>
+
+        <svg
+          ref={svgCanvas}
+          width={width}
+          height={height}
+          style={{ backgroundColor: canvasColor }}
+          version="1.1"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {makePaths()}
+          {circles}
+        </svg>
+      </div>
+    </Scrollbars>
   );
 };
 
